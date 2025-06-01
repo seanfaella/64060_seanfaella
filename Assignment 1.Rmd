@@ -1,0 +1,25 @@
+```{r}
+data <- read.csv("/Users/seanfaella/Downloads/golf_rounds_detailed.csv")
+head(data)
+```
+```{r}
+summary(data$Score)
+```
+```{r}
+summary(data$Course)
+```
+```{r}
+data$score_doubled <- data$Score * 2
+```
+```{r}
+hist(data$Score, 
+     main = "Histogram of Golf Scores", 
+     xlab = "Score")
+```
+```{r}
+clean_data <- na.omit(data[, c("Fairway_Hit_.", "Score")])
+plot(clean_data$Fairway_Hit_., clean_data$Score,
+     main = "Fairways Hit vs Score",
+     xlab = "Fairways Hit",
+     ylab = "Score")
+```
