@@ -1,0 +1,102 @@
+```{r load-data}
+data <- read.csv("~/Downloads/UniversalBank.csv")
+head(data)
+```
+```{r clean-data}
+clean_data <- subset(data, select = -c(ID, ZIP.Code))
+clean_data$Personal.Loan <- as.factor(clean_data$Personal.Loan)
+str(clean_data)
+```
+```{r split-data}
+set.seed(123)
+library(caret)
+train_index <- createDataPartition(clean_data$Personal.Loan, p = 0.7, list = FALSE)
+train_data <- clean_data[train_index, ]
+test_data <- clean_data[-train_index, ]
+```
+```{r knn-model}
+library(class)
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+train_X <- as.data.frame(lapply(train_data[, -which(names(train_data) == "Personal.Loan")], normalize))
+test_X  <- as.data.frame(lapply(test_data[, -which(names(test_data) == "Personal.Loan")], normalize))
+
+train_Y <- train_data$Personal.Loan
+test_Y  <- test_data$Personal.Loan
+
+library(class)
+knn_pred <- knn(train = train_X, test = test_X, cl = train_Y, k = 5)
+
+table(Predicted = knn_pred, Actual = test_Y)
+conf_matrix <- table(Predicted = knn_pred, Actual = test_Y)
+
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+sensitivity <- conf_matrix["1", "1"] / sum(conf_matrix[, "1"])
+specificity <- conf_matrix["0", "0"] / sum(conf_matrix[, "0"])
+
+accuracy
+sensitivity
+specificity
+ks <- c(1, 3, 5, 7, 15)
+
+results <- data.frame(k = ks, Accuracy = NA, Sensitivity = NA, Specificity = NA)
+
+for (i in seq_along(ks)) {
+  k_val <- ks[i]
+  knn_pred <- knn(train = train_X, test = test_X, cl = train_Y, k = k_val)
+  conf_matrix <- table(Predicted = knn_pred, Actual = test_Y)
+  
+  acc <- sum(diag(conf_matrix)) / sum(conf_matrix)
+  sens <- conf_matrix["1", "1"] / sum(conf_matrix[, "1"])
+  spec <- conf_matrix["0", "0"] / sum(conf_matrix[, "0"])
+  
+  results[i, ] <- c(k_val, acc, sens, spec)
+}
+
+results
+misclassified <- test_data[knn_pred != test_Y, ]
+nrow(misclassified)
+head(misclassified)
+summary(misclassified)
+prop.table(table(misclassified$Personal.Loan))
+library(ggplot2)
+
+ggplot(results, aes(x = k, y = Accuracy)) +
+  geom_line() +
+  geom_point() +
+  ylim(0.9, 1) +
+  labs(title = "Accuracy vs. k", x = "k", y = "Accuracy")
+set.seed(123)
+train_index <- createDataPartition(clean_data$Personal.Loan, p = 0.5, list = FALSE)
+train_data <- clean_data[train_index, ]
+remaining_data <- clean_data[-train_index, ]
+
+val_index <- createDataPartition(remaining_data$Personal.Loan, p = 0.6, list = FALSE)
+val_data <- remaining_data[val_index, ]
+test_data <- remaining_data[-val_index, ]
+
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+train_X <- as.data.frame(lapply(train_data[, -which(names(train_data) == "Personal.Loan")], normalize))
+val_X <- as.data.frame(lapply(val_data[, -which(names(val_data) == "Personal.Loan")], normalize))
+test_X <- as.data.frame(lapply(test_data[, -which(names(test_data) == "Personal.Loan")], normalize))
+
+train_Y <- train_data$Personal.Loan
+val_Y <- val_data$Personal.Loan
+test_Y <- test_data$Personal.Loan
+
+knn_train <- knn(train = train_X, test = train_X, cl = train_Y, k = 3)
+knn_val <- knn(train = train_X, test = val_X, cl = train_Y, k = 3)
+knn_test <- knn(train = train_X, test = test_X, cl = train_Y, k = 3)
+
+conf_train <- table(Predicted = knn_train, Actual = train_Y)
+conf_val <- table(Predicted = knn_val, Actual = val_Y)
+conf_test <- table(Predicted = knn_test, Actual = test_Y)
+
+conf_train
+conf_val
+conf_test
