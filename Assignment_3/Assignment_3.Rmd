@@ -1,0 +1,68 @@
+---
+title: "Assignment 3"
+output: html_document
+---
+```{r}
+library(e1071)
+
+
+```
+```{r load-data}
+data <- read.csv("~/Downloads/UniversalBank (1).csv")
+head(data)
+```
+```{r clean-data}
+clean_data <- subset(data, select = -c(ID, ZIP.Code))
+clean_data$Personal.Loan <- as.factor(clean_data$Personal.Loan)
+str(clean_data)
+```
+```{r split-data}
+set.seed(123)
+library(caret)
+
+split <- createDataPartition(clean_data$Personal.Loan, p = 0.7, list = FALSE)
+train_data <- clean_data[split, ]
+test_data <- clean_data[-split, ]
+model <- naiveBayes(Personal.Loan ~ ., data = train_data)
+summary(model)
+```
+```{r}
+library(e1071)
+nb_model <- naiveBayes(Personal.Loan ~ ., data = train_data)
+predictions <- predict(nb_model, test_data)
+```
+```{r}
+conf_matrix <- table(Predicted = predictions, Actual = test_data$Personal.Loan)
+conf_matrix
+```
+```{r}
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+sensitivity <- conf_matrix["1", "1"] / sum(conf_matrix[, "1"])
+specificity <- conf_matrix["0", "0"] / sum(conf_matrix[, "0"])
+
+accuracy
+sensitivity
+specificity
+```
+```{r}
+misclassified <- test_data[predictions != test_data$Personal.Loan, ]
+nrow(misclassified)
+head(misclassified)
+```
+```{r}
+prop.table(table(misclassified$Personal.Loan))
+```
+```{r}
+library(ggplot2)
+
+metrics <- data.frame(
+  Metric = c("Accuracy", "Sensitivity", "Specificity"),
+  Value = c(accuracy, sensitivity, specificity)
+)
+
+ggplot(metrics, aes(x = Metric, y = Value)) +
+  geom_col(fill = "steelblue") +
+  ylim(0, 1) +
+  labs(title = "Naive Bayes Performance Metrics")
+```
+
