@@ -1,0 +1,62 @@
+---
+title: "Assignment 4"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(factoextra)
+
+pharma <- read_csv("~/Downloads/Pharmaceuticals (4).csv")
+pharma_num <- pharma[, 3:11]
+pharma_scaled <- scale(pharma_num)
+```
+
+```{r}
+fviz_nbclust(pharma_scaled, kmeans, method = "wss") +
+  labs(title = "Elbow Method for Optimal Clusters")
+```
+
+```{r}
+set.seed(123)
+km_res <- kmeans(pharma_scaled, centers = 3, nstart = 25)
+pharma$Cluster <- as.factor(km_res$cluster)
+```
+
+```{r}
+pharma %>%
+  group_by(Cluster) %>%
+  summarise(across(Market_Cap:Leverage, mean, na.rm = TRUE))
+```
+
+```{r}
+table(pharma$Median_Recommendation, pharma$Cluster)
+table(pharma$Location, pharma$Cluster)
+table(pharma$Exchange, pharma$Cluster)
+```
+
+```{r}
+fviz_cluster(km_res, data = pharma_scaled,
+             palette = "jco",
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_minimal(),
+             main = "Cluster Plot for Pharmaceutical Companies")
+```
+
+```{r}
+pharma$Cluster_Label <- recode(pharma$Cluster,
+                               `1` = "Growth",
+                               `2` = "Mid Market",
+                               `3` = "Enterprise")
+fviz_cluster(list(data = pharma_scaled, cluster = pharma$Cluster_Label),
+             palette = "jco",
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_minimal(),
+             main = "Cluster Plot for Pharmaceutical Companies") +
+  labs(color = "Cluster Label")
+```
